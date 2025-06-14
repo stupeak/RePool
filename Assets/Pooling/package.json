@@ -1,0 +1,12 @@
+{
+  "name": "com.lustie.pooling",
+  "version": "1.0.0",
+  "displayName": "Pooling",
+  "description": "Unity Object Pool",
+  "unity": "2022.3",
+  "author": {
+    "name": "Lustie",
+    "email": "lustie@gmail.com",
+    "url": "https://github.com/lusties/Pooling"
+  }
+}
