@@ -2,78 +2,116 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Lustie.Pooling
+namespace Stupeak.Pooling
 {
-    public class MultiComponentPool<TKey, TValue> where TValue : Component
+    public class MultiComponentPool<TKey, TValue> //: IPoolContainer<TValue>
+        where TValue : Component
     {
+        const string CLONE_SUFFIX = "(Clone)";
+
         private readonly Dictionary<TKey, ComponentPool<TValue>> m_Pools = new();
-        private int capacity = 1;
+        private int growthSize = 1;
+        private bool keepOriginalName;
 
         public MultiComponentPool() : this(1) { }
 
-        public MultiComponentPool(int capacity)
+        public MultiComponentPool(int growthSize, bool keepOriginalName = true)
         {
-            this.m_Pools = new(capacity);
-            this.capacity = capacity;
+            this.m_Pools = new(growthSize);
+            this.growthSize = growthSize;
+            this.keepOriginalName = keepOriginalName;
         }
 
-        public void Create(TKey key, TValue component, int size)
+        public void Prewarm(TKey key, TValue instance, int size)
         {
             if (!m_Pools.TryGetValue(key, out ComponentPool<TValue> pool))
             {
-                pool = new ComponentPool<TValue>(component);
+                pool = new ComponentPool<TValue>(instance, null, 1, 1, keepOriginalName);
                 m_Pools.Add(key, pool);
             }
 
-            pool.Create(component, size);
+            pool.Prewarm(instance, size);
         }
 
-        public TValue Get(TKey key, Vector3 position, Quaternion rotation)
+        public T Rent<T>(TKey key, TValue instance, Vector3 position, Quaternion rotation, bool activeObject = true)
+            where T : TValue
+        {
+            return (T)Rent(key, instance, position, rotation, activeObject);
+        }
+
+        public TValue Rent(TKey key, Vector3 position, Quaternion rotation)
         {
             if (!m_Pools.TryGetValue(key, out ComponentPool<TValue> pool))
             {
                 return null;
             }
 
-            return pool.Get(position, rotation);
+            return pool.Rent(position, rotation);
         }
 
-        public TValue GetOrCreate(TKey key, TValue component, Vector3 position, Quaternion rotation, bool activeObject = true)
+        public TValue Rent(TKey key, TValue instance, Vector3 position, Quaternion rotation, bool activeObject = true)
         {
             if (!m_Pools.TryGetValue(key, out ComponentPool<TValue> pool))
             {
-                pool = new ComponentPool<TValue>(component);
+                pool = new ComponentPool<TValue>(instance, null, 1, 1, keepOriginalName);
                 m_Pools.Add(key, pool);
             }
 
-            return pool.GetOrCreate(component, position, rotation, activeObject, capacity);
+            return pool.Rent(position, rotation, activeObject);
         }
 
-        public T GetOrCreate<T>(TKey key, TValue component, Vector3 position, Quaternion rotation, bool activeObject = true) where T : TValue
-        {
-            return (T)GetOrCreate(key, component, position, rotation, activeObject);
-        }
-
-        public TValue GetOrCreate(TKey key, TValue component, Vector3 position, Quaternion rotation, Action<TValue> OnGet, bool activeObject = true)
+        public void Return(TKey key, TValue instance)
         {
             if (!m_Pools.TryGetValue(key, out ComponentPool<TValue> pool))
             {
-                pool = new ComponentPool<TValue>(component);
+                pool = new ComponentPool<TValue>(instance, null, 1, 1, keepOriginalName);
                 m_Pools.Add(key, pool);
             }
 
-            return pool.GetOrCreate(component, position, rotation, OnGet, activeObject, capacity);
+            pool.Return(instance);
         }
 
-        public void Return(TKey key, TValue component)
+        public void Return(TValue instance, bool nameCheck = true)
         {
-            if (!m_Pools.TryGetValue(key, out ComponentPool<TValue> pool))
+            if (typeof(TKey) != typeof(string))
             {
-                pool = new ComponentPool<TValue>(component);
-                m_Pools.Add(key, pool);
+                Debug.LogWarning("key is not string to be returned by name");
+                return;
             }
 
-            pool.Return(component);
+            if (nameCheck)
+            {
+                //ReadOnlySpan<char> cloneSuffixSpan = CLONE_SUFFIX.AsSpan();
+                ReadOnlySpan<char> nameSpan = instance.gameObject.name.AsSpan();
+
+                if (nameSpan.Length >= CLONE_SUFFIX.Length && nameSpan.EndsWith(CLONE_SUFFIX))
+                {
+                    Debug.LogWarning($"ReturnClone aborted: GameObject.name \"{instance.gameObject.name}\" ends with \"(Clone)\". Key may not exist in pool.");
+                    return;
+                }
+            }
+
+            Return((TKey)(object)instance.gameObject.name, instance);
+        }
+
+        public void Return(TValue instance)
+        {
+            Return(instance, true);
+        }
+
+        public void Release(TValue instance)
+        {
+
+        }
+
+        public void Clear()
+        {
+            foreach (var pool in m_Pools.Values)
+            {
+                pool.Clear();
+            }
+
+            m_Pools.Clear();
         }
     }
 }

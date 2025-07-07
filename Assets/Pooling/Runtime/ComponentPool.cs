@@ -4,137 +4,113 @@ using UnityEngine;
 
 using Object = UnityEngine.Object;
 
-namespace Lustie.Pooling
+namespace Stupeak.Pooling
 {
     /// <summary>
     /// 
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class ComponentPool<T> where T : Component
+    public class ComponentPool<T> : IPoolContainer<T>
+        where T : Component
     {
         public readonly Queue<T> pool;
 
         private Transform parent;
-        private readonly T prefab;
+        private readonly T original;
 
-        public ComponentPool()
-        {
-            this.pool = new();
-        }
+        private int growthSize { get; set; }
+        private bool keepOriginalName { get; set; }
 
-        public ComponentPool(T prefab) : this()
+        public ComponentPool(T original, Transform parent = null, int defaultSize = 1, int growthSize = 1, bool keepOriginalName = true, Action<T> OnCreateDefaultPool = null)
         {
-            this.prefab = prefab;
-        }
-
-        public ComponentPool(T prefab, Transform parent) : this()
-        {
-            this.prefab = prefab;
+            this.pool = new(defaultSize);
+            this.original = original;
             this.parent = parent;
+            this.growthSize = growthSize;
+            this.keepOriginalName = keepOriginalName;
+
+            Prewarm(defaultSize, OnCreateDefaultPool);
         }
 
-        public ComponentPool(T prefab, int defaultSize, Transform parent, Action<T> OnCreated = null) : this(prefab, parent)
+        public void Prewarm(int size, Action<T> OnCreated = null)
         {
-            Create(defaultSize, OnCreated);
-        }
-
-        public void Create(int size, Action<T> OnCreated = null)
-        {
-            if (prefab)
-                Create(prefab, size, OnCreated);
+            if (original)
+                Prewarm(original, size, OnCreated);
             else
-                Debug.LogWarning("No prefab has been assigned");
+                Debug.LogWarning("No original has been assigned");
         }
 
-        public void Create(T component, int size, Action<T> OnCreated = null)
+        public void Prewarm(T original, int size, Action<T> OnCreated = null)
         {
             for (int i = 0; i < size; i++)
             {
-                T go = Object.Instantiate(component);
+                T go = Object.Instantiate(original);
                 go.gameObject.SetActive(false);
+
+                if (keepOriginalName)
+                    go.gameObject.name = this.original.name;
+
                 if (parent)
                     go.transform.SetParent(parent, false);
+
+                // assign pool container to pooled object.
+                if (go is IPooledObject<T> pooledObject)
+                    pooledObject.poolContainer = this;
+
                 pool.Enqueue(go);
 
                 OnCreated?.Invoke(go);
             }
         }
 
-        public T Get(bool activeObject = true, Action<T> OnGet = null)
+        public T Rent()
         {
+            return Rent(true);
+        }        
+
+        public T Rent(bool activeObject)
+        {
+            //if (pool.Count == 0)
             if (!pool.TryDequeue(out T cpn))
             {
-                return null;
+                Prewarm(growthSize);
             }
-            OnGet?.Invoke(cpn);
             cpn.gameObject.SetActive(activeObject);
             return cpn;
         }
 
-        public T Get(Vector3 position, Quaternion rotation, bool activeObject = true)
+        public T Rent(Vector3 position, Quaternion rotation, bool activeObject = true)
         {
-            if (!pool.TryDequeue(out T cpn))
-            {
-                return null;
-            }
-            cpn.transform.SetPositionAndRotation(position, rotation);
-            cpn.gameObject.SetActive(activeObject);
-            return cpn;
+            T instance = Rent(activeObject);
+            instance.transform.SetPositionAndRotation(position, rotation);
+            instance.gameObject.SetActive(activeObject);
+            return instance;
         }
 
-        public T Get(Vector3 position, Quaternion rotation, Action<T> OnGet, bool activeObject = true)
+        public void AddExisting(T instance)
         {
-            if (!pool.TryDequeue(out T cpn))
-            {
-                return null;
-            }
-            OnGet?.Invoke(cpn);
-            cpn.transform.SetPositionAndRotation(position, rotation);
-            cpn.gameObject.SetActive(activeObject);
-            return cpn;
+            pool.Enqueue(instance);
         }
 
-        public T GetOrCreate(bool activeObject = true, int createCount = 1)
+        public void Return(T instance, bool active)
         {
-            if (pool.Count == 0)
-                Create(createCount);
-
-            return Get(activeObject);
+            pool.Enqueue(instance);
+            instance.gameObject.SetActive(active);
         }
 
-        public T GetOrCreate(Vector3 position, Quaternion rotation, bool activeObject = true, int createCount = 1)
+        public void Return(T instance)
         {
-            if (pool.Count == 0)
-                Create(createCount);
-
-            return Get(position, rotation, activeObject);
+            Return(instance, false);
         }
 
-        public T GetOrCreate(T component, Vector3 position, Quaternion rotation, bool activeObject = true, int createCount = 1)
+        public void Release(T instance)
         {
-            if (pool.Count == 0)
-                Create(component, createCount);
 
-            return Get(position, rotation, activeObject);
         }
 
-        public T GetOrCreate(T component, Vector3 position, Quaternion rotation, Action<T> OnGet, bool activeObject = true, int createCount = 1)
+        public void Clear()
         {
-            if (pool.Count == 0)
-                Create(component, createCount);
-
-            return Get(position, rotation, OnGet, activeObject);
-        }
-
-        public void AddExisting(T component)
-        {
-            pool.Enqueue(component);
-        }
-
-        public void Return(T component, bool active = false)
-        {
-            pool.Enqueue(component);
-            component.gameObject.SetActive(active);
+            pool?.Clear();
         }
     }
 }
