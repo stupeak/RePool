@@ -4,7 +4,7 @@
 ## Installation
 
 ```
-https://github.com/stupeak/Pooling.git?path=Assets/Poolling
+https://github.com/stupeak/Pooling.git?path=Assets/Pooling
 ```
 
 ### Pool Containers
