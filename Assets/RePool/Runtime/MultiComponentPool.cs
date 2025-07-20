@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Stupeak.Pooling
+namespace Stupeak.RePool
 {
     public class MultiComponentPool<TKey, TValue> //: IPoolContainer<TValue>
         where TValue : Component

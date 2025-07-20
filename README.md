@@ -1,10 +1,11 @@
-# Stupeak.Pooling
+# RePool
 
+unity object pool
 
 ## Installation
 
 ```
-https://github.com/stupeak/Pooling.git?path=Assets/Pooling
+https://github.com/stupeak/RePool.git?path=Assets/RePool
 ```
 
 ### Pool Containers
@@ -24,8 +25,9 @@ class GameObjectPool
 
 ## Examples
 
-
 ```C#
+using Stupeak.RePool;
+
 class Bullet { }
 
 ComponentPool<Bullet> bulletPool = new(bulletPrefab, bulletParent);

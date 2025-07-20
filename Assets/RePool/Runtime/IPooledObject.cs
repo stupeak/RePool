@@ -1,4 +1,4 @@
-namespace Stupeak.Pooling
+namespace Stupeak.RePool
 {
     public interface IPooledObject<T>
         where T : class

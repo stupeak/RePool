@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Stupeak.Pooling
+namespace Stupeak.RePool
 {
     /// <summary>
     /// 

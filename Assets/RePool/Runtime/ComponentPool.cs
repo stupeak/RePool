@@ -4,7 +4,7 @@ using UnityEngine;
 
 using Object = UnityEngine.Object;
 
-namespace Stupeak.Pooling
+namespace Stupeak.RePool
 {
     /// <summary>
     /// 
