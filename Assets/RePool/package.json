@@ -1,12 +1,12 @@
 {
-  "name": "com.stupeak.pooling",
+  "name": "com.stupeak.repool",
   "version": "1.0.0",
-  "displayName": "Pooling",
+  "displayName": "RePool",
   "description": "Unity Object Pool",
   "unity": "2022.3",
   "author": {
     "name": "Stupeak",
     "email": "stupeak.vn@gmail.com",
-    "url": "https://github.com/stupeak/Pooling"
+    "url": "https://github.com/stupeak/RePool"
   }
 }
